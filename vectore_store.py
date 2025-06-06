@@ -11,6 +11,7 @@ from chromadb.utils import embedding_functions
 from openai import OpenAI
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema import Document
 
 class VectorStore:
     def __init__(self, captioning_model: str = "gpt-4o", data_path: str = "./data"):
@@ -45,7 +46,7 @@ class VectorStore:
         text_chunks = []
         for i, doc in enumerate(pdf_documents):
             
-            split_docs = text_splitter.split_documents([doc])
+            split_docs = text_splitter.split_documents([doc]) #returnslangchain.schema.Document docs
             for j, chunk in enumerate(split_docs):
                 
                 chunk.metadata.update({
@@ -92,6 +93,31 @@ class VectorStore:
         )
         caption = response.choices[0].message.content
         return caption
+
+    def load_images(self, image_dir: str, category: str = "data"):
+        
+        image_files = [f for f in os.listdir(image_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        image_docs = []
+
+        for image_file in image_files:
+            image_path = os.path.join(image_dir, image_file)
+            caption = self.get_image_caption_openai(image_path)
+
+            image_doc = Document(
+                page_content = caption,
+                metadata = {
+                    "source": image_path,
+                    "type": "image",
+                    "document_name": os.path.basename(image_path),
+                    "description_generated": True,
+                    "captioning_model": self.captioning_model_name,
+                    "category": category,
+                    "keywords": ["all_keys"],
+                }
+            )
+            image_docs.append(image_doc)
+
+        return image_docs
     
     
     def prepare_pdf(self, pdf_file: str, chunk_size: int, chunk_overlap: int):
