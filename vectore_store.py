@@ -160,12 +160,22 @@ class VectorStore:
         self.save_documents(text_docs + image_docs)
         
     
-    def retriever(self, query):
-        vector = self.embedding_function([query])
-        results = self.collection.query(    
-            query_embeddings=vector,
-            n_results=5,
-            include=["documents"]
+    def retriever(self, query, metadata = None):
+
+        vectorstore = Chroma(
+            persist_directory = self.data_path,
+            embedding_function = self.embedding_function
         )
-        res = " \n".join(str(item) for item in results['documents'][0])
+
+        # metadata = {"type": "text"}
+        
+        if metadata:
+            res = vectorstore.similarity_search_with_metadata(
+                query = query,
+                k = 2,
+                where = metadata # Filter based on metadata
+            )
+        else:
+            res = vectorstore.similarity_search(query, k = 2)
+
         return res
