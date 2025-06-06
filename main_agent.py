@@ -15,12 +15,12 @@ class Agent:
 
         response = self.llm.chat.completions.create(
             model = self.model,
-            messages =[
+            messages = [
                 {"role": "user", "content": input_text},
             ],
-            max_tokens=150,
-            temperature=0
+            max_tokens = 150,
+            temperature = 0
         )
-        
+
         return response.choices[0].message.content.strip()
 
