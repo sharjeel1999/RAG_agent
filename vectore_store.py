@@ -1,4 +1,5 @@
 import re
+import os
 from PyPDF2 import PdfReader
 from PIL import Image
 import base64
@@ -30,46 +31,36 @@ class VectorStore:
             raise ValueError("Unsupported file format. Only PDF files are supported.")
 
 
-    def load_pdf(self, pdf_file: str, chunk_size: int, chunk_overlap: int):
-        reader = PdfReader(pdf_file)    
-        documents = {}
-        for page_no in range(len(reader.pages)):        
-            page = reader.pages[page_no]
-            text = page.extract_text() 
-            text_chunks = self.get_chunks(text, chunk_size, chunk_overlap)
-            documents[page_no] = text_chunks
-
-        return documents
-
-    def get_chunks(self, text: str, chunk_size: int, chunk_overlap: int) -> list:
+    def load_pdf(self, pdf_file: str, chunk_size: int, chunk_overlap: int, category: str = "data"):
+        pdf_loader = PyPDFLoader(pdf_file)
+        pdf_documents = pdf_loader.load()
 
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size = chunk_size,      # Max characters in a chunk
-            chunk_overlap = chunk_overlap,    # Overlap between chunks to maintain context
+            chunk_size = chunk_size,
+            chunk_overlap = chunk_overlap,
             length_function = len,
             is_separator_regex = False,
         )
-        chunks = text_splitter.split_documents(text)
-        return chunks
 
-    def add_metadata(self, docs, file_name):
-        docs_strings = []  
-        ids = []  
-        metadatas = []  
-        id = 0  
+        text_chunks = []
+        for i, doc in enumerate(pdf_documents):
             
-        for page_no in docs.keys():
-            for doc in docs[page_no]:        
-                docs_strings.append(doc)                        
-                metadatas.append({'page_no': page_no,"file_name": file_name})
-                ids.append(id)
-                id += 1
+            split_docs = text_splitter.split_documents([doc])
+            for j, chunk in enumerate(split_docs):
+                
+                chunk.metadata.update({
+                    "type": "text",
+                    "document_name": os.path.basename(pdf_file),
+                    "page": chunk.metadata.get("page"),
+                    "chunk_index_on_page": j,
+                    "category": category,
+                })
+                text_chunks.append(chunk)
 
-            self.collection.add(
-                ids=[str(id) for id in ids],  
-                documents=docs_strings,  
-                metadatas=metadatas,  
-            )
+        return text_chunks
+
+
+
 
     def encode_image_to_base64(self, image_path):
         with Image.open(image_path) as img:
