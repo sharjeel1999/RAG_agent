@@ -10,6 +10,7 @@ from chromadb.utils import embedding_functions
 
 from openai import OpenAI
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
@@ -20,19 +21,24 @@ class VectorStore:
         self.captioning_model_name = captioning_model
         self.client = OpenAI()
 
-        chroma_client = chromadb.PersistentClient(path = self.data_path)
+        # chroma_client = chromadb.PersistentClient(path = self.data_path)
         self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(model_name = "all-MiniLM-L6-v2")
-        self.collection = chroma_client.get_or_create_collection(name = "products", embedding_function = self.embedding_function)
+        # self.collection = chroma_client.get_or_create_collection(name = "products", embedding_function = self.embedding_function)
 
-    def ingest_documents(self, file_path: str, chunk_size: int = 500, chunk_overlap: int = 100):
+    def ingest_documents(self, file_path: str = None, image_paths = None, chunk_size: int = 500, chunk_overlap: int = 100):
         """Ingest documents from the specified file."""
-        if file_path.endswith('.pdf'):
-            self.prepare_pdf(file_path, chunk_size, chunk_overlap)
-        else:
-            raise ValueError("Unsupported file format. Only PDF files are supported.")
+        if file_path and not image_paths:
+            if file_path.endswith('.pdf'):
+                self.prepare_pdf(file_path, chunk_size, chunk_overlap)
+            else:
+                raise ValueError("Unsupported file format. Only PDF files are supported.")
+        
+        elif image_paths and file_path:
+            self.ingest_text_images(file_path, chunk_size, chunk_overlap, image_paths)
 
 
-    def load_pdf(self, pdf_file: str, chunk_size: int, chunk_overlap: int, category: str = "data"):
+
+    def prepare_pdf_docs(self, pdf_file: str, chunk_size: int, chunk_overlap: int, category: str = "data"):
         pdf_loader = PyPDFLoader(pdf_file)
         pdf_documents = pdf_loader.load()
 
@@ -94,7 +100,7 @@ class VectorStore:
         caption = response.choices[0].message.content
         return caption
 
-    def load_images(self, image_dir: str, category: str = "data"):
+    def prepare_image_docs(self, image_dir: str, category: str = "data"):
         
         image_files = [f for f in os.listdir(image_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         image_docs = []
@@ -119,11 +125,39 @@ class VectorStore:
 
         return image_docs
     
-    
-    def prepare_pdf(self, pdf_file: str, chunk_size: int, chunk_overlap: int):
-        """Prepare the PDF file for vector storage."""
-        docs = self.load_pdf(pdf_file, chunk_size, chunk_overlap)
-        self.add_metadata(docs, pdf_file)
+    def save_documents(self, documents):
+        if os.path.exists(self.data_path) and len(os.listdir(self.data_path)) > 0:
+            print(f"Loading existing vector store from: {self.data_path}")
+            
+            vectorstore = Chroma(
+                persist_directory = self.data_path,
+                embedding_function = self.embedding_function
+            )
+            print(f"Adding {len(documents)} new documents to the existing store...")
+            
+            vectorstore.add_documents(documents)
+            print("New documents added.")
+        else:
+            print(f"Creating new vector store at: {self.data_path}")
+            
+            vectorstore = Chroma.from_documents(
+                documents=documents,
+                embedding=self.embedding_function,
+                persist_directory=self.data_path
+            )
+            print("New vector store created.")
+
+        vectorstore.persist()
+        print("Vector store persisted successfully.")
+
+    def ingest_pdf(self, pdf_file: str, chunk_size: int, chunk_overlap: int):
+        text_docs = self.prepare_pdf_docs(pdf_file, chunk_size, chunk_overlap)
+        self.save_documents(text_docs)
+
+    def ingest_text_images(self, pdf_file: str, chunk_size: int, chunk_overlap: int, image_dirs, category: str = "data"):
+        text_docs = self.prepare_pdf_docs(pdf_file, chunk_size, chunk_overlap)
+        image_docs = self.prepare_image_docs(image_dirs, category)
+        self.save_documents(text_docs + image_docs)
         
     
     def retriever(self, query):
