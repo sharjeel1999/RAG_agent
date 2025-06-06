@@ -11,8 +11,8 @@ class VectorStore:
         self.data_path = data_path
 
         chroma_client = chromadb.PersistentClient(path = self.data_path)
-        embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(model_name = "all-MiniLM-L6-v2")
-        self.collection = chroma_client.get_or_create_collection(name = "products", embedding_function = embedding_function)
+        self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(model_name = "all-MiniLM-L6-v2")
+        self.collection = chroma_client.get_or_create_collection(name = "products", embedding_function = self.embedding_function)
 
     def ingest_documents(self, file_path: str, chunk_size: int = 500, chunk_overlap: int = 100):
         """Ingest documents from the specified file."""
@@ -68,4 +68,13 @@ class VectorStore:
         docs = self.load_pdf(pdf_file, chunk_size, chunk_overlap)
         self.add_metadata(docs, pdf_file)
         
-
+    
+    def retriever(self, query):
+        vector = self.embedding_function([query])
+        results = self.collection.query(    
+            query_embeddings=vector,
+            n_results=5,
+            include=["documents"]
+        )
+        res = " \n".join(str(item) for item in results['documents'][0])
+        return res
