@@ -27,12 +27,19 @@ class Agent:
                 image_dirs = image_paths
             )
 
-    def generate_response(self, prompt, context):
-        input_text = (
-            "Based on the below context, respond with an accurate answer. If you don't find the answer within the context, say I do not know. Don't repeat the question\n\n"
-            f"{context}\n\n"
-            f"{prompt}"
-        )
+    def generate_response(self, prompt, use_context = True):
+        if use_context:
+            context = self.vectore_store.retriever(
+                query = prompt,
+                # metadata = {"type": "text"}
+            )
+            input_text = (
+                "Based on the below context, respond with an accurate answer. If you don't find the answer within the context, say I do not know. Don't repeat the question\n\n"
+                f"{context}\n\n"
+                f"{prompt}"
+            )
+        else:
+            input_text = prompt
 
         response = self.llm.chat.completions.create(
             model = self.model,
