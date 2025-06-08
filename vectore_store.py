@@ -11,18 +11,20 @@ from chromadb.utils import embedding_functions
 from openai import OpenAI
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
 class VectorStore:
-    def __init__(self, captioning_model: str = "gpt-4o", data_path: str = "./data"):
+    def __init__(self, API_KEY, captioning_model: str = "gpt-4o", data_path: str = "./data"):
         self.data_path = data_path
 
         self.captioning_model_name = captioning_model
-        self.client = OpenAI()
+        self.client = OpenAI(api_key = API_KEY)
 
         # chroma_client = chromadb.PersistentClient(path = self.data_path)
-        self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(model_name = "all-MiniLM-L6-v2")
+        # self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(model_name = "all-MiniLM-L6-v2")
+        self.embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         # self.collection = chroma_client.get_or_create_collection(name = "products", embedding_function = self.embedding_function)
 
     def ingest_documents(self, file_path: str = None, image_paths = None, chunk_size: int = 500, chunk_overlap: int = 100):
@@ -118,7 +120,7 @@ class VectorStore:
                     "description_generated": True,
                     "captioning_model": self.captioning_model_name,
                     "category": category,
-                    "keywords": ["all_keys"],
+                    "keywords": None,
                 }
             )
             image_docs.append(image_doc)
