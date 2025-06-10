@@ -3,6 +3,7 @@
 
 testing.py
 data/
+__pycache__/
 
 
 
