@@ -9,6 +9,10 @@ class ToolBox:
         self.model = model
         self.duckduckgo_runner = DuckDuckGoSearchRun()
 
+        self.function_mappings = {
+            "duckduckgo_search": self.duckduckgo_search
+        }
+
     def duckduckgo_search(self, query: str, num_results: int = 5):
         return self.duckduckgo_runner.run(query=query, num_results=num_results)
     
@@ -61,5 +65,31 @@ class ToolBox:
                 })
         
         return functions
+    
+    def execute_tools(self, functions):
+
+        combined_results = []
+        for function in functions:
+            function_name = function['function_name']
+            arguments = function['arguments']
+            function_result = self.function_mappings[function_name](**arguments)
+
+            if isinstance(function_result, list):
+                combined_results.extend(function_result)
+            else:
+                combined_results.append(function_result)
+        
+        # results = []
+        # for function in functions:
+        #     if function["function_name"] == "duckduckgo_search":
+        #         query = function["arguments"].get("query", "")
+        #         if query:
+        #             result = self.duckduckgo_search(query)
+        #             results.append({
+        #                 "function_name": function["function_name"],
+        #                 "result": result
+        #             })
+        
+        return combined_results
     
     
