@@ -1,6 +1,8 @@
 from openai import OpenAI
+import json
 
 from vectore_store import VectorStore
+from toolbox import Toolbox
 
 
 class Agent:
@@ -8,6 +10,7 @@ class Agent:
         self.model = model
         self.llm = OpenAI(api_key = API_KEY)
         self.vector_store = VectorStore(API_KEY = API_KEY)
+        self.toolbox = Toolbox(self.llm, self.model)
         
         self.chunk_size = 600
         self.chunk_overlap = 100
@@ -28,11 +31,19 @@ class Agent:
             )
 
     def generate_response(self, prompt, use_context = True):
+
+        tools = self.toolbox.get_tool_names(prompt)
+
         if use_context:
-            context = self.vectore_store.retriever(
-                query = prompt,
-                # metadata = {"type": "text"}
-            )
+            if tools:
+                tools_output = self.toolbox.execute_tools(tools)
+                context = json.dumps(tools_output)
+            else:
+                context = self.vectore_store.retriever(
+                    query = prompt,
+                    # metadata = {"type": "text"}
+                )
+
             input_text = (
                 "Based on the below context, respond with an accurate answer. If you don't find the answer within the context, say I do not know. Don't repeat the question\n\n"
                 f"{context}\n\n"
