@@ -3,25 +3,51 @@ import json
 # from langchain_community.tools.tavily_research import TavilySearchResults
 from langchain_community.tools import DuckDuckGoSearchRun
 
+from vectore_store import VectorStore
+
 class ToolBox:
-    def __init__(self, llm, model: str = "gpt-4o"):
+    def __init__(self, API_KEY, llm, model: str = "gpt-4o"):
         self.llm = llm
         self.model = model
-        self.duckduckgo_runner = DuckDuckGoSearchRun()
+        self.vector_store = VectorStore(API_KEY = API_KEY)
+        self.duckduckgo_runner = DuckDuckGoSearchRun(num_results = 5)
 
         self.function_mappings = {
-            "duckduckgo_search": self.duckduckgo_search
+            "duckduckgo_search": self.duckduckgo_search,
+            "vector_store_retriever": self.vector_store.retriever
         }
 
-    def duckduckgo_search(self, query: str, num_results: int = 5):
-        return self.duckduckgo_runner.run(query=query, num_results=num_results)
+    def duckduckgo_search(self, query: str):
+        return self.duckduckgo_runner.run(query)
     
     def get_tools(self):
+        vector_store_tool_schema = {
+            "type": "function",
+            "function": {
+                "name": "vector_store_retriever",
+                "description": "A tool for retrieving information from a vector store in local storage based on a query. Use this when the user asks a question that can be answered by your internal vector store.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The query string to search in the vector store."
+                        },
+                        "metadata": {
+                            "type": "object",
+                            "description": "Optional metadata to filter the search results."
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+
         duckduckgo_tool_schema = {
             "type": "function",
             "function": {
                 "name": "duckduckgo_search", # This is the name the LLM will 'call'
-                "description": "A powerful tool for general web search, current events, and obtaining up-to-date information. Use this when the user asks a question that cannot be answered by your internal tools or requires external, real-time data.",
+                "description": "A powerful tool for general web/online search, current events, and obtaining up-to-date information. Use this when the user asks a question that cannot be answered by your internal tools or requires external, real-time data.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -36,6 +62,7 @@ class ToolBox:
         }
 
         tools = [
+            vector_store_tool_schema,
             duckduckgo_tool_schema
         ]
         return tools
@@ -91,5 +118,4 @@ class ToolBox:
         #             })
         
         return combined_results
-    
     
