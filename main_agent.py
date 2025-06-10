@@ -3,15 +3,15 @@ import json
 from langchain.schema import Document
 
 from vectore_store import VectorStore
-from toolbox import Toolbox
+from toolbox import ToolBox
 
 
 class Agent:
     def __init__(self, model, API_KEY):
         self.model = model
         self.llm = OpenAI(api_key = API_KEY)
-        self.vector_store = VectorStore(API_KEY = API_KEY)
-        self.toolbox = Toolbox(API_KEY, self.llm, self.model)
+        self.vector_store = VectorStore(API_KEY = API_KEY)#, data_path = "/home/sharjeel/Desktop/repositories/RAG_agent/vector_data")
+        self.toolbox = ToolBox(API_KEY, self.llm, self.model)
         
         self.chunk_size = 600
         self.chunk_overlap = 100

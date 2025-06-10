@@ -2,6 +2,10 @@
 #Template for AL projects for Dynamics 365 Business Central
 
 testing.py
+data/
+
+
+
 #launch.json folder
 .vscode/
 #Cache folder

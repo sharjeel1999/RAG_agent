@@ -10,8 +10,10 @@ from chromadb.utils import embedding_functions
 
 from openai import OpenAI
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.vectorstores import Chroma # deprecated
+from langchain_chroma import Chroma
+# from langchain_community.embeddings import HuggingFaceEmbeddings # deprecated
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
@@ -149,7 +151,7 @@ class VectorStore:
             )
             print("New vector store created.")
 
-        vectorstore.persist()
+        # vectorstore.persist() # depricated, no longer needed
         print("Vector store persisted successfully.")
 
     def ingest_pdf(self, pdf_file: str, chunk_size: int, chunk_overlap: int):
